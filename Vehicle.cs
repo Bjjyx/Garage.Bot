@@ -8,7 +8,7 @@ namespace Garage.Bot
 {
     internal class Vehicle
     {
-        string _name;
+        private string _name;
 
         internal Vehicle(string _name)
         {
