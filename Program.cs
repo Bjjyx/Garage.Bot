@@ -4,7 +4,7 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        UserInterface userInterface = new();
+        UserComandLineInterface userInterface = new();
         userInterface.MaimMenu();
     }
 }

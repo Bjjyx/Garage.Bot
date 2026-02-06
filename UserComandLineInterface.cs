@@ -3,10 +3,11 @@
 namespace Garage.Bot
 {
     // Класс пользователького интерфейса
-    internal class UserInterface
+    internal class UserComandLineInterface
     {
         private string? _userCommand;
-        private User? _user;
+        private bool _userRegistred = false;
+        private UserManager _userManager = new();
         private string[] _commands = { "/start", "/addVehicle", "/showVehicles", "/removeVehicle", "/help", "/info", "/echo", "/exit" };
         private StringBuilder _userCommandBuilder = new();
         private List<string> _userCommandList = new List<string>();
@@ -20,24 +21,12 @@ namespace Garage.Bot
                 _userCommandList.Clear();
                 Console.Clear();
 
-                if (_user == null)
-                {
-                    Console.WriteLine($"Вас приветствует Garage.Bot!\nВведите команду и нажмите любую клавишу:\n{_userCommandBuilder.AppendJoin("\n", _commands)}");
-                }
-                else
-                {
-                    Console.WriteLine($"{_user.Name}, с возвращением в Garage.Bot :)\nВведите команду и нажмите любую клавишу:\n{_userCommandBuilder.AppendJoin("\n", _commands)}");
-                }
+                HelloMainMenu();
 
                 _userCommand = Console.ReadLine();
 
-                if (_userCommand == null)
-                {
-                    Console.WriteLine("Вы отменили ввод");
-                    Console.ReadKey();
-                    _userCommandList.Add("");
-                }
-                else
+                //В данном if строка с проверкой, что _userCommand не null добавлен исключительно, чтобы не было ворнинга в строке 31)
+                if (IsInputCorrect(_userCommand) && _userCommand != null)
                 {
                     _userCommandList.AddRange(_userCommand.Trim().Split());
 
@@ -45,23 +34,23 @@ namespace Garage.Bot
                     {
                         case "/start":
                             Console.Clear();
-                            if (_user == null)
+                            if (!_userRegistred)
                             {
-                                CommandStart(ref _user);
+                                CommandStart();
                             }
                             break;
                         case "/help":
                             Console.Clear();
-                            CommandHelp(ref _user);
+                            CommandHelp();
                             break;
                         case "/info":
                             Console.Clear();
-                            CommandInfo(ref _user);
+                            CommandInfo();
                             break;
                         case "/echo":
                             Console.Clear();
                             _userCommandList.Remove("/echo");
-                            CommandEcho(_userCommandList, ref _user);
+                            CommandEcho(_userCommandList);
                             break;
                         case "/addvehicle":
                             Console.Clear();
@@ -83,6 +72,7 @@ namespace Garage.Bot
                             _userCommand = "";
                             Console.ReadKey();
                             break;
+
                     }
                 }
 
@@ -92,30 +82,70 @@ namespace Garage.Bot
 
         }
 
+        //Приветствие в главном меню
+        private void HelloMainMenu()
+        {
+            if (!_userRegistred)
+            {
+                Console.WriteLine($"Вас приветствует Garage.Bot!\nВведите команду и нажмите любую клавишу:\n{_userCommandBuilder.AppendJoin("\n", _commands)}");
+            }
+            else
+            {
+                Console.WriteLine($"{_userManager.GetUserName()}, с возвращением в Garage.Bot :)\nВведите команду и нажмите любую клавишу:\n{_userCommandBuilder.AppendJoin("\n", _commands)}");
+            }
+        }
+
+        //Проверка, что ввод пользователя не пустой
+        private bool IsInputCorrect(string? _input)
+        {
+            if (string.IsNullOrWhiteSpace(_input))
+            {
+                Console.WriteLine("Прерван воод, либо отправленно пустое поле");
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        private void WriteUserNameAndText(string _text)
+        {
+            if (_userRegistred)
+            {
+                Console.WriteLine(_userManager.GetUserName() + _text);
+            }
+        }
+
+        private bool WriteNotRegistred()
+        {
+            if (!_userRegistred)
+            {
+                Console.WriteLine("Вы не зарегистрировались :(");
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
         // Комманда старт, для нового пользователя предлагает ввести имя, для пользователя с именем делает ничего
-        private void CommandStart(ref User _user)
+        private void CommandStart()
         {
             Console.WriteLine("Введите ваше имя:");
             _userCommand = Console.ReadLine();
 
-            if (string.IsNullOrWhiteSpace(_userCommand))
+            if (IsInputCorrect(_userCommand))
             {
-                Console.WriteLine("Прерван воод, либо отправленно пустое поле");
-                Console.ReadKey();
-            } else
-            {
-                _user = new();
-                _user.Name = _userCommand;
+                _userRegistred = _userManager.AddUserName(_userCommand);
             }
         }
 
         // Описание работы рпограммы, пока не заполнено
-        private void CommandHelp(ref User _user)
+        private void CommandHelp()
         {
-            if (!string.IsNullOrEmpty(_user.Name))
-            {
-                Console.WriteLine(_user.Name);
-            }
+            WriteUserNameAndText("");
             Console.WriteLine("Доступные команды:" +
                 "\nКоманда /start - если пользователь ещё не вводил своё имя, то позволяет это сделать, если пользователь уже вводил своё имя, то возвращает его в главное меню без изменений" +
                 "\nКоманда /help - данное меню с пояснениями :)" +
@@ -130,135 +160,118 @@ namespace Garage.Bot
         }
 
         // Информация о программе, версия и дата создания
-        private void CommandInfo(ref User _user)
+        private void CommandInfo()
         {
-            if (!string.IsNullOrEmpty(_user.Name))
-            {
-                Console.WriteLine(_user.Name);
-            }
-            Console.WriteLine($"Garage.Bot\nv0.3.0\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
+            WriteUserNameAndText("");
+            Console.WriteLine($"Garage.Bot\nv0.3.1\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
             Console.ReadKey();
         }
 
         // Получает на вход текст, который был написан вместе с командой /echo и выводит его на экран
-        private void CommandEcho(List<string> _echo, ref User _user)
+        private void CommandEcho(List<string> _echo)
         {
             _userCommandBuilder.Clear();
             if (!_echo.Any())
             {
                 Console.WriteLine("Не задан текст для передачи");
                 _userCommandList.Add(" ");
-                Console.ReadKey();
             } else 
-            { 
-                if (!string.IsNullOrEmpty(_user.Name))
-                {
-                    Console.WriteLine($"{_user.Name}, вы ввели:");
-                }
+            {
+                WriteUserNameAndText(", вы ввели:");
                 _userCommandBuilder.AppendJoin(" ", _echo);
                 Console.WriteLine(_userCommandBuilder.ToString());
-                Console.ReadKey();
                 _userCommandList.Insert(0,"");
             }
+            Console.ReadKey();
         }
 
         // Добавляет транспорт в список транспорта пользователя
         private void CommandAddVehicle()
         {
-            if (_user == null)
-            {
-                Console.WriteLine("Вы не зарегистрировались :(");
-                Console.ReadKey();
-            }
-            else
+            if (WriteNotRegistred())
             {
                 Console.WriteLine("Введите название транспортного средства:");
                 _userCommand = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(_userCommand))
+                if (IsInputCorrect(_userCommand))
                 {
-                    Console.WriteLine("Ошибка ввода, название не может быть пустым");
-                    Console.ReadKey();
-                }
-                else
-                {
-                    _user.AddVehicle(_userCommand);
+                    _userManager.AddUserVehicle(_userCommand);
                     Console.WriteLine("Транспорт успешно поставлен в Garage :)");
-                    Console.ReadKey();
                 }
             }
+            Console.ReadKey();
+        }
+        //Проверяет пуст ли гараж, если пуст выдаёт сообщение и завершает метод
+        private bool GarageNotEmpty()
+        {
+            var _userVehicleList = _userManager.GetUserVehicleList();
+            if (!_userVehicleList.Any())
+            {
+                Console.WriteLine($"{_userManager.GetUserName()}, ваш гараж пока пуст :(");
+                return false;
+            } else
+            {
+                return true;
+            }
+        }
+
+        //Выводит названия + индексы транспортных средств юзвера
+        private void WriteVehilces()
+        {
+            var _userVehicleList = _userManager.GetUserVehicleList();
+            var _vehicleIndex = 0;
+            Console.WriteLine("В вашем гараже:\n");
+            _userVehicleList.ForEach(Vehicle => Console.WriteLine($"{_vehicleIndex++} {Vehicle.Name}"));
         }
 
         private void CommandShowAllVehicles()
         {
-            if (_user == null)
+            if (WriteNotRegistred())
             {
-                Console.WriteLine("Вы не зарегистрированы");
-                Console.ReadKey();
-            }
-            else
-            {
-                var _userVehicleList = _user.GetVehicleList();
-                if (!_userVehicleList.Any())
+                if (GarageNotEmpty())
                 {
-                    Console.WriteLine($"{_user.Name}, ваш гараж пока пуст :(");
-                    Console.ReadKey();
-                }
-                else
-                {
-                   // Console.WriteLine("В вашем гараже:\n" + _userCommandBuilder.AppendJoin("\n", _userVehicleList));
-                    Console.WriteLine("В вашем гараже:\n");
-                    _userVehicleList.ForEach(Vehicle => Console.WriteLine(Vehicle.GetName()));
-                    Console.ReadKey();
+                    WriteVehilces();
+                    Console.WriteLine();
                 }
             }
+            Console.ReadKey();
         }
 
         //Метод для удаления транспорта пользователя
-        //!!! Переработать при рефакторинге !!!
         private void CommandRemoveVehicle()
         {
-            if (_user == null)
+            if (WriteNotRegistred())
             {
-                Console.WriteLine("Вы не зарегистрированы");
-                Console.ReadKey();
-            }
-            else
-            {
-                var _userVehicleList = _user.GetVehicleList();
-                if (!_userVehicleList.Any())
+                if (GarageNotEmpty())
                 {
-                    Console.WriteLine($"{_user.Name}, ваш гараж пока пуст :(");
-                    Console.ReadKey();
-                }
-                else
-                {
-                    Console.WriteLine("Выберите что нужно убрать из гаража:\n");
-                    _userVehicleList.ForEach(Vehicle => Console.WriteLine(Vehicle.GetName()));
-
-                    int _userVehicleNumber = -1;
-                    string _userVehicleName = "";
+                    Console.WriteLine($"{_userManager.GetUserName()}, введите номер транспорта для удаления");
+                    WriteVehilces();
                     _userCommand = Console.ReadLine();
 
-                    _userVehicleList.ForEach(Vehicle => {
-                        if (string.Equals(Vehicle.GetName(), _userCommand, StringComparison.OrdinalIgnoreCase))
-                        {
-                            _userVehicleNumber = _userVehicleList.IndexOf(Vehicle);
-                            _userVehicleName = Vehicle.GetName();
-                        }
-                    });
+                    if (IsInputCorrect(_userCommand))
+                    {
+                        int index;
+                        bool _isInteger = int.TryParse(_userCommand, out index);
 
-                    if (_userVehicleNumber == -1)
-                    {
-                        Console.WriteLine("Транспорт не найден");
-                        Console.ReadKey();
-                    } else
-                    {
-                        _user.RemoveVehicle(_userVehicleNumber);
-                        Console.WriteLine(($"{_user.Name}, транспорт {_userVehicleName} был удалён"));
-                        Console.ReadKey();
+                        if (_isInteger)
+                        {
+                            if (_userManager.DeleteUserVehicle(index))
+                            {
+                                Console.WriteLine("Транспорт убран из Garage");
+                            }
+                            else
+                            {
+                                Console.WriteLine("Транспорт не был найден");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Ошибка ввода, необходимо ввести целое число");
+                        }
                     }
                 }
             }
+
+            Console.ReadKey();
         }
     }
 }

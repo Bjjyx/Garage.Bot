@@ -8,16 +8,6 @@ namespace Garage.Bot
 {
     internal class Vehicle
     {
-        private string _name;
-
-        internal Vehicle(string _name)
-        {
-            this._name = _name;
-        }
-
-        internal string GetName()
-        {
-            return _name;
-        }
+        internal string? Name {  get; set; }
     }
 }

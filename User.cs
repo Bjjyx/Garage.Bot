@@ -4,13 +4,15 @@ namespace Garage.Bot
 {
     internal class User
     {
+
         private List<Vehicle> _userVehicleList = new();
 
         internal string? Name { get; set; }
 
-        internal void AddVehicle(string _vehicleName)
+        internal void AddVehicle(string? _vehicleName)
         {
-            Vehicle _userVehicle = new Vehicle(_vehicleName);
+            Vehicle _userVehicle = new Vehicle();
+            _userVehicle.Name = _vehicleName;
             _userVehicleList.Add(_userVehicle);
         }
 
