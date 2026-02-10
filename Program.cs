@@ -6,6 +6,6 @@ internal class Program
     private static void Main(string[] args)
     {
         UserComandLineInterface userInterface = new();
-        userInterface.MaimMenu();
+        userInterface.MainMenu();
     }
 }

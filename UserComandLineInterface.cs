@@ -15,7 +15,7 @@ namespace Garage.Bot
         private List<string> _userCommandList = new List<string>();
 
         //Главное меню, от куда происходят переходы в подменю
-        internal void MaimMenu()
+        internal void MainMenu()
         {
             do
             {
