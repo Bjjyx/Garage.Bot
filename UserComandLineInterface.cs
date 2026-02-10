@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
+using Garage.Bot.CustomExceptions;
 
 namespace Garage.Bot
 {
@@ -15,19 +17,19 @@ namespace Garage.Bot
         //Главное меню, от куда происходят переходы в подменю
         internal void MaimMenu()
         {
-
             do
             {
-                _userCommandList.Clear();
-                Console.Clear();
-
-                HelloMainMenu();
-
-                _userCommand = Console.ReadLine();
-
-                //В данном if строка с проверкой, что _userCommand не null добавлен исключительно, чтобы не было ворнинга в строке 31)
-                if (IsInputCorrect(_userCommand) && _userCommand != null)
+                try
                 {
+                    _userCommandList.Clear();
+                    Console.Clear();
+
+                    HelloMainMenu();
+
+                    _userCommand = Console.ReadLine();
+
+                    ValidateString(_userCommand);
+
                     _userCommandList.AddRange(_userCommand.Trim().Split());
 
                     switch (_userCommandList[0].ToLowerInvariant())
@@ -75,7 +77,29 @@ namespace Garage.Bot
 
                     }
                 }
+                catch (ArgumentException argEx)
+                {
+                    Console.WriteLine("Произошла непредвиденная ошибка:\n" + argEx.GetType() + "\n" + argEx.Message + "\n" + argEx.StackTrace + "\n" + argEx.InnerException);
+                    Console.ReadKey();
+                }
+                catch (VehicleCountLimitException countEx)
+                {
+                    Console.WriteLine(countEx.Message);
+                    Console.ReadKey();
 
+                }
+                catch (VehicleNameLengthLimitException lenghtEx)
+                {
+                    Console.WriteLine(lenghtEx.Message);
+                    Console.ReadKey();
+
+                }
+                catch (DuplicateVehicleException duplicateEx)
+                {
+                    Console.WriteLine(duplicateEx.Message);
+                    Console.ReadKey();
+
+                }
                 _userCommandBuilder.Clear();
             } while (!_userCommandList[0].Equals(_commands[7]));
 
@@ -136,10 +160,8 @@ namespace Garage.Bot
             Console.WriteLine("Введите ваше имя:");
             _userCommand = Console.ReadLine();
 
-            if (IsInputCorrect(_userCommand))
-            {
-                _userRegistred = _userManager.AddUserName(_userCommand);
-            }
+            ValidateString( _userCommand );
+            _userRegistred = _userManager.AddUserName(_userCommand);
         }
 
         // Описание работы рпограммы, пока не заполнено
@@ -163,7 +185,7 @@ namespace Garage.Bot
         private void CommandInfo()
         {
             WriteUserNameAndText("");
-            Console.WriteLine($"Garage.Bot\nv0.3.1\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
+            Console.WriteLine($"Garage.Bot\nv0.4.0\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
             Console.ReadKey();
         }
 
@@ -190,6 +212,16 @@ namespace Garage.Bot
         {
             if (WriteNotRegistred())
             {
+                if (_userManager.IsUserVehicleCountLimitNotSet())
+                {
+                    SetUserVehicleCountLimit();
+                }
+
+                if (_userManager.IsUserVehicleNameLimitNotSet())
+                {
+                    SetUserVehicleNameLimit();
+                }
+
                 Console.WriteLine("Введите название транспортного средства:");
                 _userCommand = Console.ReadLine();
                 if (IsInputCorrect(_userCommand))
@@ -198,8 +230,27 @@ namespace Garage.Bot
                     Console.WriteLine("Транспорт успешно поставлен в Garage :)");
                 }
             }
+                
             Console.ReadKey();
         }
+
+        //Добавление лимита на длинну названия траспортного срадства
+        private void SetUserVehicleNameLimit()
+        {
+            Console.WriteLine("Введите ограниение на количество символов в название транспорта от 1 до 100");
+            _userCommand = Console.ReadLine();
+            _userManager.SetUserVehicleNameLimit(ParseAndValidateInt(_userCommand, 1, 100));
+        }
+
+        //Добавление лимита на кол-во траспорта пользователя
+        private void SetUserVehicleCountLimit()
+        {
+            Console.WriteLine("Введите колличество транспорта от 1 до 100");
+            _userCommand = Console.ReadLine();
+
+            _userManager.SetUserVehicleCountLimit(ParseAndValidateInt(_userCommand, 1, 100));
+        }
+
         //Проверяет пуст ли гараж, если пуст выдаёт сообщение и завершает метод
         private bool GarageNotEmpty()
         {
@@ -247,31 +298,56 @@ namespace Garage.Bot
                     WriteVehilces();
                     _userCommand = Console.ReadLine();
 
-                    if (IsInputCorrect(_userCommand))
+                    ValidateString(_userCommand);
+                    if (_userManager.DeleteUserVehicle(ParseInt(_userCommand)))
                     {
-                        int index;
-                        bool _isInteger = int.TryParse(_userCommand, out index);
-
-                        if (_isInteger)
-                        {
-                            if (_userManager.DeleteUserVehicle(index))
-                            {
-                                Console.WriteLine("Транспорт убран из Garage");
-                            }
-                            else
-                            {
-                                Console.WriteLine("Транспорт не был найден");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Ошибка ввода, необходимо ввести целое число");
-                        }
+                        Console.WriteLine("Транспорт убран из Garage");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Транспорт не был найден");
                     }
                 }
             }
 
             Console.ReadKey();
+        }
+
+        //Проверка соответствия условиям и возможности преобразования строки в инт
+        private int ParseAndValidateInt(string? userCommand, int minCount, int maxCount)
+        {
+            int index;
+            bool _isInteger = int.TryParse(userCommand, out index);
+
+            if (!_isInteger || index < minCount || maxCount < index)
+            {
+                throw new ArgumentException();
+            }
+
+            return index;
+        }
+
+        //Проверка валидности ввода
+        private void ValidateString(string userCommand)
+        {
+            if (string.IsNullOrWhiteSpace(userCommand) || string.IsNullOrEmpty(userCommand))
+            {
+                throw new ArgumentException();
+            }
+        }
+
+        //Проверка, что строка - это число
+        private int ParseInt(string? userCommand)
+        {
+            int index;
+            bool _isInteger = int.TryParse(userCommand, out index);
+
+            if (!_isInteger)
+            {
+                throw new ArgumentException();
+            }
+
+            return index;
         }
     }
 }

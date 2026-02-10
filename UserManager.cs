@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Garage.Bot.CustomExceptions;
 
 namespace Garage.Bot
 {
@@ -28,11 +29,12 @@ namespace Garage.Bot
 
         //Добавление траспорта
         //На данном этапе, название транспорта должно быть уникальным значением
-        internal bool AddUserVehicle(string? UserVehicleName)
+        internal void AddUserVehicle(string UserVehicleName)
         {
+            IsUserVehicleCountIn();
+            IsUserVehicleNameInLimit(UserVehicleName);
+            IsVehicleDuplicate(UserVehicleName);
             _user.AddVehicle(UserVehicleName);
-            return true;
-
         }
 
         //Получение списка с транспортом
@@ -42,10 +44,10 @@ namespace Garage.Bot
         }
 
         //Удаление тс пользователя
-        //Если не тс не найден возвращает false 
+        //Если тс не найден возвращает false 
         internal bool DeleteUserVehicle(int VehicleNumber)
         {
-            if (_user.GetVehicleList().Count() > VehicleNumber)
+            if (_user.GetVehicleCount() > VehicleNumber && VehicleNumber >= 0)
             {
                 _user.RemoveVehicle(VehicleNumber);
                 return true;
@@ -54,6 +56,69 @@ namespace Garage.Bot
             {
                 return false;
             }
+        }
+
+        //Установка лимита транспорта
+        internal void SetUserVehicleCountLimit(int VehicleCount)
+        {
+            _user.VehicleCountLimit = VehicleCount;
+        }
+
+        internal void SetUserVehicleNameLimit(int NameLimit)
+        {
+            _user.VehicleNameLimit = NameLimit;
+        }
+
+        internal bool IsUserVehicleNameLimitNotSet()
+        {
+            if (_user.VehicleNameLimit == null)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        internal bool IsUserVehicleCountLimitNotSet()
+        {
+            if (_user.VehicleCountLimit == null)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        private void IsUserVehicleNameInLimit(string VehicleName)
+        {
+            if (_user.VehicleNameLimit < VehicleName.Length)
+            {
+                throw new VehicleNameLengthLimitException(VehicleName.Length, _user.VehicleNameLimit);
+            }
+        }
+
+        private void IsUserVehicleCountIn() 
+        {
+            if (_user.GetVehicleCount() + 1 > _user.VehicleCountLimit)
+            {
+                throw new VehicleCountLimitException(_user.VehicleCountLimit);
+            }
+        }
+
+        private void IsVehicleDuplicate(string VehicleName)
+        {
+            _user.GetVehicleList().ForEach(vehicle =>
+            {
+                if (vehicle.Name.Equals(VehicleName, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new DuplicateVehicleException(VehicleName);
+                }
+            });
+
         }
     }
 }
