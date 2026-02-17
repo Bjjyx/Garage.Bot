@@ -1,20 +1,27 @@
-﻿using System.Xml.Linq;
-
-namespace Garage.Bot
+﻿namespace Garage.Bot.Data
 {
     internal class User
     {
 
         private List<Vehicle> _userVehicleList = new();
 
-        internal string? Name { get; set; }
+        internal string? Name { get; }
+        internal Guid Id { get; set; }
+        internal DateTime RegisteredAt { get; set; }
+
         internal int? VehicleCountLimit { get; set; }
         internal int? VehicleNameLimit { get; set; }
 
-        internal void AddVehicle(string _vehicleName)
+        internal User(string Name)
         {
-            Vehicle _userVehicle = new Vehicle();
-            _userVehicle.Name = _vehicleName;
+            this.Name = Name;
+            Id = Guid.NewGuid();
+            RegisteredAt = DateTime.Now;
+        }
+
+        internal void AddVehicle(User _user, string _vehicleName)
+        {
+            Vehicle _userVehicle = new Vehicle(_user, _vehicleName);
             _userVehicleList.Add(_userVehicle);
         }
 

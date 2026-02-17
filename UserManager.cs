@@ -1,30 +1,29 @@
-﻿using System.Text;
-using Garage.Bot.CustomExceptions;
+﻿using Garage.Bot.CustomExceptions;
+using Garage.Bot.Data;
 
 namespace Garage.Bot
 {
     internal class UserManager
     {
-        private User _user = new();
+        private User _user;
 
         //Добавление имени пользователя
-        internal bool AddUserName(string? UserName)
+        internal bool AddUser(string UserName)
         {
-            _user.Name = UserName;
+            _user = new User(UserName);
             return true;
         }
 
         //Получение имени пользователя
         internal string GetUserName()
         {
-            if (string.IsNullOrEmpty(_user.Name))
-            {
-                return "";
-            }
-            else
-            {
-                return _user.Name;
-            }
+            return _user.Name;
+        }
+
+        //Получение экземпляра пользователя
+        internal User? GetUser()
+        {
+            return _user;
         }
 
         //Добавление траспорта
@@ -34,13 +33,42 @@ namespace Garage.Bot
             IsUserVehicleCountIn();
             IsUserVehicleNameInLimit(UserVehicleName);
             IsVehicleDuplicate(UserVehicleName);
-            _user.AddVehicle(UserVehicleName);
+            _user.AddVehicle(_user, UserVehicleName);
         }
 
         //Получение списка с транспортом
         internal List<Vehicle> GetUserVehicleList()
         {
             return _user.GetVehicleList();
+        }
+
+        //Получение только активного транспорта
+        internal List<Vehicle> GetUserActiveVehicleList()
+        {
+            var _activeVehicleList = new List<Vehicle>();
+            foreach (var vehicle in _user.GetVehicleList())
+            {
+                if (vehicle.State == VehicleState.Active)
+                {
+                    _activeVehicleList.Add(vehicle);
+                }
+            }
+            return _activeVehicleList;
+        }
+
+        //Переводит статус выбранного транспортного средства из Active в Service
+        internal bool MoveToService(string Id)
+        {
+            foreach (var vehicle in _user.GetVehicleList())
+            {
+                if (Id.Equals(vehicle.Id.ToString()))
+                {
+                    vehicle.State = VehicleState.Service;
+                    vehicle.StateChangedAt = DateTime.Now;
+                    return true;
+                }
+            }
+            return false;
         }
 
         //Удаление тс пользователя
@@ -64,11 +92,13 @@ namespace Garage.Bot
             _user.VehicleCountLimit = VehicleCount;
         }
 
+        //Установка лимита длинны названия транспорта
         internal void SetUserVehicleNameLimit(int NameLimit)
         {
             _user.VehicleNameLimit = NameLimit;
         }
 
+        //Проверка, что лимит на длинну имени не установлен
         internal bool IsUserVehicleNameLimitNotSet()
         {
             if (_user.VehicleNameLimit == null)
@@ -81,6 +111,7 @@ namespace Garage.Bot
             }
         }
 
+        //Проверка, что лимит транспортных средств не установлен
         internal bool IsUserVehicleCountLimitNotSet()
         {
             if (_user.VehicleCountLimit == null)
@@ -93,6 +124,7 @@ namespace Garage.Bot
             }
         }
 
+        //Проверка, что название проходит по лимиту символов
         private void IsUserVehicleNameInLimit(string VehicleName)
         {
             if (_user.VehicleNameLimit < VehicleName.Length)
@@ -101,6 +133,7 @@ namespace Garage.Bot
             }
         }
 
+        //Проверка, что не привышенно количество транспорта
         private void IsUserVehicleCountIn() 
         {
             if (_user.GetVehicleCount() + 1 > _user.VehicleCountLimit)
@@ -109,6 +142,7 @@ namespace Garage.Bot
             }
         }
 
+        //Проверка уникальности названия транспорта
         private void IsVehicleDuplicate(string VehicleName)
         {
             _user.GetVehicleList().ForEach(vehicle =>
