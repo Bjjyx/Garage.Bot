@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 using Garage.Bot.CustomExceptions;
 
 namespace Garage.Bot
@@ -8,9 +7,8 @@ namespace Garage.Bot
     internal class UserComandLineInterface
     {
         private string? _userCommand;
-        private bool _userRegistred = false;
-        private UserManager _userManager = new();
-        private string[] _commands = { "/start", "/addVehicle", "/showVehicles", "/removeVehicle", "/help", "/info", "/echo", "/exit" };
+        private readonly UserManager _userManager = new();
+        private readonly string[] _commands = { "/start", "/addVehicle", "/showActiveVehicles", "/showAllVehicles", "/moveToService", "/removeVehicle", "/help", "/info", "/echo", "/exit" };
         private StringBuilder _userCommandBuilder = new();
         private List<string> _userCommandList = new List<string>();
 
@@ -21,6 +19,7 @@ namespace Garage.Bot
             {
                 try
                 {
+                    _userCommandBuilder.Clear();
                     _userCommandList.Clear();
                     Console.Clear();
 
@@ -36,7 +35,7 @@ namespace Garage.Bot
                     {
                         case "/start":
                             Console.Clear();
-                            if (!_userRegistred)
+                            if (_userManager.GetUser() == null)
                             {
                                 CommandStart();
                             }
@@ -51,18 +50,27 @@ namespace Garage.Bot
                             break;
                         case "/echo":
                             Console.Clear();
-                            _userCommandList.Remove("/echo");
+                            _userCommandList.RemoveAt(0);
                             CommandEcho(_userCommandList);
                             break;
-                        case "/addvehicle":
+                        case "/addvehicle" when IsRegistred():
                             Console.Clear();
                             CommandAddVehicle();
                             break;
-                        case "/showvehicles":
+                        case "/showactivevehicles" when IsRegistred():
                             Console.Clear();
-                            CommandShowAllVehicles();
+                            CommandShowVehicles(false);
                             break;
-                        case "/removevehicle":
+                        case "/showallvehicles" when IsRegistred():
+                            Console.Clear();
+                            CommandShowVehicles(true);
+                            break;
+                        case "/movetoservice" when IsRegistred():
+                            Console.Clear();
+                            _userCommandList.RemoveAt(0);
+                            CommandMoveToService(_userCommandList);
+                            break;
+                        case "/removevehicle" when IsRegistred():
                             Console.Clear();
                             CommandRemoveVehicle();
                             break;
@@ -70,9 +78,15 @@ namespace Garage.Bot
                             break;
                         default:
                             Console.Clear();
-                            Console.WriteLine("Введена неизвестная комманда! Попробуйте ещё раз :(");
-                            _userCommand = "";
-                            Console.ReadKey();
+                            if (IsRegistred())
+                            {
+                                Console.WriteLine("Введена неизвестная комманда! Попробуйте ещё раз :(");
+                            }
+                            else
+                            {
+                                Console.WriteLine("Вы не зарегистрированы :(");
+                            }
+                                Console.ReadKey(true);
                             break;
 
                     }
@@ -80,28 +94,28 @@ namespace Garage.Bot
                 catch (ArgumentException argEx)
                 {
                     Console.WriteLine("Произошла непредвиденная ошибка:\n" + argEx.GetType() + "\n" + argEx.Message + "\n" + argEx.StackTrace + "\n" + argEx.InnerException);
-                    Console.ReadKey();
+                    Console.ReadKey(true);
                 }
                 catch (VehicleCountLimitException countEx)
                 {
                     Console.WriteLine(countEx.Message);
-                    Console.ReadKey();
+                    Console.ReadKey(true);
 
                 }
                 catch (VehicleNameLengthLimitException lenghtEx)
                 {
                     Console.WriteLine(lenghtEx.Message);
-                    Console.ReadKey();
+                    Console.ReadKey(true);
 
                 }
                 catch (DuplicateVehicleException duplicateEx)
                 {
                     Console.WriteLine(duplicateEx.Message);
-                    Console.ReadKey();
+                    Console.ReadKey(true);
 
                 }
-                _userCommandBuilder.Clear();
-            } while (!_userCommandList[0].Equals(_commands[7]));
+                _userCommandList.Insert(0, "");
+            } while (!_userCommandList[0].Equals(_commands[9]));
 
 
         }
@@ -109,7 +123,7 @@ namespace Garage.Bot
         //Приветствие в главном меню
         private void HelloMainMenu()
         {
-            if (!_userRegistred)
+            if (_userManager.GetUser() == null)
             {
                 Console.WriteLine($"Вас приветствует Garage.Bot!\nВведите команду и нажмите любую клавишу:\n{_userCommandBuilder.AppendJoin("\n", _commands)}");
             }
@@ -124,7 +138,7 @@ namespace Garage.Bot
         {
             if (string.IsNullOrWhiteSpace(_input))
             {
-                Console.WriteLine("Прерван воод, либо отправленно пустое поле");
+                Console.WriteLine("Прерван ввод, либо отправленно пустое поле");
                 return false;
             }
             else
@@ -135,17 +149,16 @@ namespace Garage.Bot
 
         private void WriteUserNameAndText(string _text)
         {
-            if (_userRegistred)
+            if (_userManager.GetUser() == null)
             {
                 Console.WriteLine(_userManager.GetUserName() + _text);
             }
         }
 
-        private bool WriteNotRegistred()
+        private bool IsRegistred()
         {
-            if (!_userRegistred)
+            if (_userManager.GetUser() == null)
             {
-                Console.WriteLine("Вы не зарегистрировались :(");
                 return false;
             }
             else
@@ -160,8 +173,8 @@ namespace Garage.Bot
             Console.WriteLine("Введите ваше имя:");
             _userCommand = Console.ReadLine();
 
-            ValidateString( _userCommand );
-            _userRegistred = _userManager.AddUserName(_userCommand);
+            ValidateString(_userCommand);
+            _userManager.AddUser(_userCommand);
         }
 
         // Описание работы рпограммы, пока не заполнено
@@ -174,64 +187,59 @@ namespace Garage.Bot
                 "\nКоманда /info - выводит на экран дату создания программы и её версию" +
                 "\nКоманда /echo - выводит на экран то, что было написано после самой команды, например \"/echo Hello\" выведет на экран \"Hello\"" +
                 "\nКоманда /addVehicle - добавляет транспорт в ваш Garage" +
-                "\nКоманда /showVehicles - позволяет посмотреть, какие транспортные средства стоят у вас в Гараже" +
+                "\nКоманда /showActiveVehicles - позволяет посмотреть активные транспортные средства у вас в Гараже" +
+                "\nКоманда /showAllVehicles - позволяет посмотреть все транспортные средства у вас в Гараже" +
+                "\nКоманда /moveToService - изменяет статус выбранного транспортного средства, переводя его в сервис. Вместе с командой необходимо передать Id транспортного средства" +
                 "\nКоманда /removeVehicle - позволяет убрать транспорт из гаража" +
                 "\nКоманда /exit - выход из программы" +
                 "\nПосле каждого вывода на экран, необходимо нажать любую клавишу для продолжения");
-            Console.ReadKey();
+            Console.ReadKey(true);
         }
 
         // Информация о программе, версия и дата создания
         private void CommandInfo()
         {
             WriteUserNameAndText("");
-            Console.WriteLine($"Garage.Bot\nv0.4.0\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
-            Console.ReadKey();
+            Console.WriteLine($"Garage.Bot\nv0.5.0\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
+            Console.ReadKey(true);
         }
 
         // Получает на вход текст, который был написан вместе с командой /echo и выводит его на экран
         private void CommandEcho(List<string> _echo)
         {
-            _userCommandBuilder.Clear();
-            if (!_echo.Any())
-            {
-                Console.WriteLine("Не задан текст для передачи");
-                _userCommandList.Add(" ");
-            } else 
+            if (_echo.Any())
             {
                 WriteUserNameAndText(", вы ввели:");
                 _userCommandBuilder.AppendJoin(" ", _echo);
-                Console.WriteLine(_userCommandBuilder.ToString());
-                _userCommandList.Insert(0,"");
+                Console.WriteLine(_userCommandBuilder.ToString());                
+            } else 
+            {
+                Console.WriteLine("Не задан текст для передачи");
             }
-            Console.ReadKey();
+            _userCommandList.Insert(0, "");
+            Console.ReadKey(true);
         }
 
         // Добавляет транспорт в список транспорта пользователя
         private void CommandAddVehicle()
         {
-            if (WriteNotRegistred())
+            if (_userManager.IsUserVehicleCountLimitNotSet())
             {
-                if (_userManager.IsUserVehicleCountLimitNotSet())
-                {
-                    SetUserVehicleCountLimit();
-                }
-
-                if (_userManager.IsUserVehicleNameLimitNotSet())
-                {
-                    SetUserVehicleNameLimit();
-                }
-
-                Console.WriteLine("Введите название транспортного средства:");
-                _userCommand = Console.ReadLine();
-                if (IsInputCorrect(_userCommand))
-                {
-                    _userManager.AddUserVehicle(_userCommand);
-                    Console.WriteLine("Транспорт успешно поставлен в Garage :)");
-                }
+                SetUserVehicleCountLimit();
             }
-                
-            Console.ReadKey();
+            if (_userManager.IsUserVehicleNameLimitNotSet())
+            {
+                SetUserVehicleNameLimit();
+            }
+
+            Console.WriteLine("Введите название транспортного средства:");
+            _userCommand = Console.ReadLine();
+            if (IsInputCorrect(_userCommand))
+            {
+                _userManager.AddUserVehicle(_userCommand);
+                Console.WriteLine("Транспорт успешно поставлен в Garage :)");
+            }     
+            Console.ReadKey(true);
         }
 
         //Добавление лимита на длинну названия траспортного срадства
@@ -251,66 +259,72 @@ namespace Garage.Bot
             _userManager.SetUserVehicleCountLimit(ParseAndValidateInt(_userCommand, 1, 100));
         }
 
-        //Проверяет пуст ли гараж, если пуст выдаёт сообщение и завершает метод
-        private bool GarageNotEmpty()
+        //выводит либо все, либо только активные транспортные средства
+        private bool CommandShowVehicles(bool all)
         {
-            var _userVehicleList = _userManager.GetUserVehicleList();
-            if (!_userVehicleList.Any())
-            {
-                Console.WriteLine($"{_userManager.GetUserName()}, ваш гараж пока пуст :(");
-                return false;
-            } else
-            {
-                return true;
-            }
-        }
-
-        //Выводит названия + индексы транспортных средств юзвера
-        private void WriteVehilces()
-        {
-            var _userVehicleList = _userManager.GetUserVehicleList();
             var _vehicleIndex = 0;
-            Console.WriteLine("В вашем гараже:\n");
-            _userVehicleList.ForEach(Vehicle => Console.WriteLine($"{_vehicleIndex++} {Vehicle.Name}"));
-        }
-
-        private void CommandShowAllVehicles()
-        {
-            if (WriteNotRegistred())
+            if (all)
             {
-                if (GarageNotEmpty())
+                if (_userManager.GetUserVehicleList().Any())
                 {
-                    WriteVehilces();
-                    Console.WriteLine();
+                    Console.WriteLine("В вашем гараже:\n");
+                    _userManager.GetUserVehicleList().ForEach(Vehicle => Console.WriteLine($"{_vehicleIndex++}. cтатус: {Vehicle.State}, название: {Vehicle.Name},  дата создания: {Vehicle.CreatedAt}, Id: {Vehicle.Id}"));
+                    Console.ReadKey(true);
+                    return true;
                 }
             }
-            Console.ReadKey();
+            else
+            {
+               
+                Console.WriteLine("В вашем гараже:\n");
+                _userManager.GetUserActiveVehicleList().ForEach(Vehicle => Console.WriteLine($"{_vehicleIndex++}. название: {Vehicle.Name},  дата создания: {Vehicle.CreatedAt}, Id: {Vehicle.Id}"));
+                Console.ReadKey(true);
+                return true;
+            }
+            Console.WriteLine($"{_userManager.GetUserName()}, ваш гараж пока пуст :(");
+            Console.ReadKey(true);
+            return false;
         }
 
         //Метод для удаления транспорта пользователя
         private void CommandRemoveVehicle()
         {
-            if (WriteNotRegistred())
-            {
-                if (GarageNotEmpty())
-                {
-                    Console.WriteLine($"{_userManager.GetUserName()}, введите номер транспорта для удаления");
-                    WriteVehilces();
-                    _userCommand = Console.ReadLine();
 
-                    ValidateString(_userCommand);
-                    if (_userManager.DeleteUserVehicle(ParseInt(_userCommand)))
-                    {
-                        Console.WriteLine("Транспорт убран из Garage");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Транспорт не был найден");
-                    }
+            if (CommandShowVehicles(true))
+            {
+                Console.WriteLine($"{_userManager.GetUserName()}, введите номер транспорта для удаления");
+                _userCommand = Console.ReadLine();
+                ValidateString(_userCommand);
+                if (_userManager.DeleteUserVehicle(ParseInt(_userCommand)))
+                {
+                    Console.WriteLine("Транспорт убран из Garage");
+                }
+                else
+                {
+                    Console.WriteLine("Транспорт не был найден");
                 }
             }
+            Console.ReadKey(true);
+        }
 
-            Console.ReadKey();
+        private void CommandMoveToService(List<string> id)
+        {
+            if (id.Any())
+            {
+                if (_userManager.MoveToService(id.ElementAt(0)))
+                {
+                    Console.WriteLine("Транспорта был перемещён в сервис");
+                }
+                else
+                {
+                    Console.WriteLine("Транспорт не найден");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Не задан Id");
+            }
+            Console.ReadKey(true);
         }
 
         //Проверка соответствия условиям и возможности преобразования строки в инт
