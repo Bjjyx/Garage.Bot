@@ -8,7 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\Documents\Учёба\C-Sharp-Basic-main\Homeworks\05.2 ООП интерфейсы\Otus.ToDoList.ConsoleBot\Otus.ToDoList.ConsoleBot.csproj" />
+    <None Include="OTUS.Task6.Project\Otus.ToDoList.ConsoleBot\Otus.ToDoList.ConsoleBot.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="OTUS.Task6.Project\Otus.ToDoList.ConsoleBot\bin\Debug\net8.0\" />
+    <Folder Include="OTUS.Task6.Project\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\refint\" />
+    <Folder Include="OTUS.Task6.Project\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\ref\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="OTUS.Task6.Project\Otus.ToDoList.ConsoleBot\Otus.ToDoList.ConsoleBot.csproj" />
   </ItemGroup>
 
 </Project>
