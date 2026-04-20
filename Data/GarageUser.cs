@@ -1,25 +1,28 @@
 ﻿namespace Garage.Bot.Data
 {
-    internal class User
+    internal class GarageUser
     {
 
         private List<Vehicle> _userVehicleList = new();
 
-        internal string? Name { get; }
+
+        internal long TelegramUserId { get; }
+        internal string? TelegramUserName { get; }
         internal Guid Id { get; set; }
         internal DateTime RegisteredAt { get; set; }
 
         internal int? VehicleCountLimit { get; set; }
         internal int? VehicleNameLimit { get; set; }
 
-        internal User(string Name)
+        internal GarageUser(long telegramUserId, string telegramUserName)
         {
-            this.Name = Name;
+            TelegramUserName = telegramUserName;
             Id = Guid.NewGuid();
             RegisteredAt = DateTime.Now;
+            TelegramUserId = telegramUserId;
         }
 
-        internal void AddVehicle(User _user, string _vehicleName)
+        internal void AddVehicle(GarageUser _user, string _vehicleName)
         {
             Vehicle _userVehicle = new Vehicle(_user, _vehicleName);
             _userVehicleList.Add(_userVehicle);

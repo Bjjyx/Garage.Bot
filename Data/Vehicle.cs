@@ -4,12 +4,12 @@
     {
         internal string Name {  get; set; }
         internal Guid Id { get; }
-        internal User User { get; }
+        internal GarageUser User { get; }
         internal DateTime CreatedAt { get; }
         internal VehicleState State { get; set; }
         internal DateTime StateChangedAt { get; set; }
 
-        internal Vehicle(User User, string Name)
+        internal Vehicle(GarageUser User, string Name)
         {
             this.Name = Name;
             Id = Guid.NewGuid();
