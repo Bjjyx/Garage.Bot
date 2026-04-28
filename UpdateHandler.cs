@@ -11,13 +11,16 @@ namespace Garage.Bot
     {
         private IUserManager _userManager;
         private IVehicleManager _vehicleManager;
+        private IVehicleReportService _vehicleReportService;
         private List<String> _textList = new();
-        internal UpdateHandler(IUserManager userManager, IVehicleManager vehicleManager)
+        internal UpdateHandler(IUserManager userManager, IVehicleManager vehicleManager, IVehicleReportService vehicleReport)
         {
             _userManager = userManager;
             _vehicleManager = vehicleManager;
+            _vehicleReportService = vehicleReport;
         }
-        private readonly string[] _commands = { "/start", "/addVehicle", "/ActiveVehicles", "/AllVehicles", "/moveToService", "/removeVehicle", "/help", "/info"};
+        private readonly string[] _commands = { "/start", "/addVehicle", "/activeVehicles", "/allVehicles", "/find", "/moveToService",
+            "/removeVehicle", "/report", "/help", "/info"};
         private MenuState _menuSate = MenuState.Main;
 
         public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
@@ -94,14 +97,21 @@ namespace Garage.Bot
                     _textList.RemoveAt(0);
                     DeleteVehicle(botClient, update, Guid.Parse(_textList[0]));
                     break;
+                case "/report" when IsRegistered(update):
+                    Report(botClient, update);
+                    break;
+                case "/find" when IsRegistered(update):
+                    _textList.RemoveAt(0);
+                    Find(botClient, update, string.Join(" ", _textList));
+                    break;
                 default:
                     if (IsRegistered(update))
                     {
-                        Console.WriteLine("Введена неизвестная комманда! Попробуйте ещё раз :(");
+                        botClient.SendMessage(update.Message.Chat, "Введена неизвестная комманда! Попробуйте ещё раз :(");
                     }
                     else
                     {
-                        Console.WriteLine("Вы не зарегистрированы :(");
+                        botClient.SendMessage(update.Message.Chat, "Вы не зарегистрированы :(");
                     }
                     break;
             }
@@ -130,20 +140,22 @@ namespace Garage.Bot
 
         private void Help(ITelegramBotClient botClient, Update update)
         {
-            botClient.SendMessage(update.Message.Chat, "Доступные команды:" +
+            botClient.SendMessage(update.Message.Chat, "\nДоступные команды:" +
                 "\nКоманда /start -  главное меню и регистрация пользователя" +
                 "\nКоманда /help - данное меню с пояснениями :)" +
                 "\nКоманда /info - выводит на экран дату создания программы и её версию" +
                 "\nКоманда /addVehicle - добавляет транспорт в ваш Garage" +
                 "\nКоманда /showActiveVehicles - позволяет посмотреть активные транспортные средства у вас в Гараже" +
                 "\nКоманда /showAllVehicles - позволяет посмотреть все транспортные средства у вас в Гараже" +
+                "\nКоманда /find - показывает транспорт, в название которого входит введённая строка" +
                 "\nКоманда /moveToService - изменяет статус выбранного транспортного средства, переводя его в сервис. Вместе с командой необходимо передать Id транспортного средства" +
-                "\nКоманда /removeVehicle - позволяет убрать транспорт из гаража");
+                "\nКоманда /removeVehicle - позволяет убрать транспорт из гаража" +
+                "\nКоманда /report - выводит статистику вашего транспорта");
         }
 
         private void Info(ITelegramBotClient botClient, Update update)
         {
-            botClient.SendMessage(update.Message.Chat, $"Garage.Bot\nv0.6.0\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
+            botClient.SendMessage(update.Message.Chat, $"Garage.Bot\nv0.7.0\nДата создания: {File.GetCreationTimeUtc(System.Reflection.Assembly.GetExecutingAssembly().Location)}");
         }
 
         // Добавляет транспорт в список транспорта пользователя
@@ -238,17 +250,51 @@ namespace Garage.Bot
             }
         }
 
+        private void Report(ITelegramBotClient botClient, Update update)
+        {
+            var user = _userManager.GetUser(update.Message.From.Id);
+
+            if (user != null)
+            {
+                var report = _vehicleReportService.GetUserStats(user.Id, _vehicleManager);
+                botClient.SendMessage(update.Message.Chat, $"Статистика по транспорту на {report.generatedAt.ToString("dd.MM.yyyy HH:mm:ss")}. " +
+                    $"Всего {report.total}; В сервисе: {report.service}; Активных: {report.active}");
+            }
+        }
+
+        private void Find(ITelegramBotClient botClient, Update update, string namePrefix)
+        {
+            var vehicleList = _vehicleManager.Find(_userManager.GetUser(update.Message.From.Id), namePrefix).ToList();
+            if (vehicleList.Count > 0)
+            {
+                var names = new StringBuilder();
+                names.AppendJoin("\n", vehicleList.Select(x => x.Name));
+                botClient.SendMessage(update.Message.Chat, names.ToString());
+            } else
+            {
+                botClient.SendMessage(update.Message.Chat, "Совпадений не найдено");
+            }
+        }
+
         private void setCountLimit(ITelegramBotClient botClient, Update update)
         {
-            _userManager.GetUser(update.Message.From.Id).VehicleCountLimit = int.Parse(update.Message.Text);
-            botClient.SendMessage(update.Message.Chat, "Введите лимит на название транспорта");
-            _menuSate = MenuState.NameLimit;
+            var user = _userManager.GetUser(update.Message.From.Id);
+            if (user != null)
+            {
+                user.VehicleCountLimit = int.Parse(update.Message.Text);
+                botClient.SendMessage(update.Message.Chat, "Введите лимит на название транспорта");
+                _menuSate = MenuState.NameLimit;
+            }
         }
 
         private void setNameLimit(ITelegramBotClient botClient, Update update)
         {
-            _userManager.GetUser(update.Message.From.Id).VehicleNameLimit = int.Parse(update.Message.Text);
-            Start(botClient, update);
+            var user = _userManager.GetUser(update.Message.From.Id);
+            if (user != null)
+            {
+                user.VehicleNameLimit = int.Parse(update.Message.Text);
+                Start(botClient, update);
+            }
         }
 
     }

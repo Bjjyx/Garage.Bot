@@ -1,73 +1,55 @@
 ﻿using Garage.Bot.CustomExceptions;
 using Garage.Bot.Data;
-using System.Collections.Immutable;
 
 namespace Garage.Bot
 {
     internal class VehicleManager : IVehicleManager
     {
-        private List<Vehicle> _vehicles = new();
+        private IVehicleRepository _vehicleRepository;
+
+        public VehicleManager(IVehicleRepository vehicleRepository)
+        {
+            _vehicleRepository = vehicleRepository;
+        }
 
         public Vehicle Add(GarageUser user, string name)
         {
             IsUserVehicleCountIn(user);
             IsUserVehicleNameInLimit(user, name);
-            IsVehicleDuplicate(user, name);
 
             Vehicle vehicle = new(user, name);
-            _vehicles.Add(vehicle);
+            _vehicleRepository.Add(vehicle);
 
             return vehicle;
         }
 
         public void Delete(Guid id)
         {
-            foreach (var vehicle in _vehicles)
-            {
-                if (vehicle.Id.Equals(id))
-                {
-                    _vehicles.Remove(vehicle);
-                    break;
-                }
-            }
+            _vehicleRepository.Delete(id);
         }
 
         public IReadOnlyList<Vehicle> GetActiveByUserId(Guid userId)
         {
-            List<Vehicle> userVehicles = new();
-            _vehicles.ForEach(vehicle =>
-            {
-                if (vehicle.User.Id.Equals(userId) && vehicle.State == VehicleState.Active)
-                {
-                    userVehicles.Add(vehicle);
-                }
-            });
-            return userVehicles.ToImmutableList();
+            return _vehicleRepository.GetActiveByUserId(userId);
         }
 
         public IReadOnlyList<Vehicle> GetAllByUserId(Guid userId)
         {
-            List<Vehicle> userVehicles = new();
-            _vehicles.ForEach(vehicle =>
-            {
-                if (vehicle.User.Id.Equals(userId))
-                {
-                    userVehicles.Add(vehicle);
-                }
-            });
-            return userVehicles.ToImmutableList();
+            return _vehicleRepository.GetAllByUserId(userId);
         }
 
         public void MoveToService(Guid id)
         {
-            foreach (var vehicle in _vehicles)
+            Vehicle? _vehicle = _vehicleRepository.Get(id);
+            if (_vehicle != null)
             {
-                if (vehicle.Id.Equals(id))
-                {
-                    vehicle.State = VehicleState.Service;
-                    break;
-                }
+                _vehicleRepository.Update(_vehicle);
             }
+        }
+
+        public IReadOnlyList<Vehicle> Find(GarageUser user, string namePrefix)
+        {
+            return _vehicleRepository.Find(user.Id, x => x.Name.Contains(namePrefix));
         }
 
         //Проверка, что название проходит по лимиту символов
@@ -86,19 +68,6 @@ namespace Garage.Bot
             {
                 throw new VehicleCountLimitException(user.VehicleCountLimit);
             }
-        }
-
-        //Проверка уникальности названия транспорта
-        private void IsVehicleDuplicate(GarageUser user, string name)
-        {
-            user.GetVehicleList().ForEach(vehicle =>
-            {
-                if (vehicle.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new DuplicateVehicleException(name);
-                }
-            });
-
         }
     }
 }
