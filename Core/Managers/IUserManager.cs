@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Garage.Bot.Data;
+﻿using Garage.Bot.Core.Data;
 
-namespace Garage.Bot
+namespace Garage.Bot.Core.Managers
 {
     internal interface IUserManager
     {

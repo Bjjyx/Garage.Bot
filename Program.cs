@@ -1,4 +1,6 @@
-﻿using Garage.Bot;
+﻿using Garage.Bot.Core.Managers;
+using Garage.Bot.Infrastructure.DataAccess;
+using Garage.Bot.TelegramBot;
 using Otus.ToDoList.ConsoleBot;
 
 internal class Program

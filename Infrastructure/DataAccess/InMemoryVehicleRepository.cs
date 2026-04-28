@@ -1,8 +1,9 @@
-﻿using Garage.Bot.CustomExceptions;
-using Garage.Bot.Data;
+﻿using Garage.Bot.Core.CustomExceptions;
+using Garage.Bot.Core.Data;
+using Garage.Bot.Core.DataAccess;
 using System.Collections.Immutable;
 
-namespace Garage.Bot
+namespace Garage.Bot.Infrastructure.DataAccess
 {
     internal class InMemoryVehicleRepository : IVehicleRepository
     {

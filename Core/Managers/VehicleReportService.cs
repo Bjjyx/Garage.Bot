@@ -1,6 +1,6 @@
-﻿using Garage.Bot.Data;
+﻿using Garage.Bot.Core.Data;
 
-namespace Garage.Bot
+namespace Garage.Bot.Core.Managers
 {
     internal class VehicleReportService : IVehicleReportService
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Garage.Bot.CustomExceptions
+namespace Garage.Bot.Core.CustomExceptions
 {
     internal class VehicleNameLengthLimitException : Exception
     {

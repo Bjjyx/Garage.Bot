@@ -1,10 +1,11 @@
-﻿using Garage.Bot.CustomExceptions;
-using Garage.Bot.Data;
+﻿using Garage.Bot.Core.CustomExceptions;
+using Garage.Bot.Core.Data;
+using Garage.Bot.Core.Managers;
 using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
 using System.Text;
 
-namespace Garage.Bot
+namespace Garage.Bot.TelegramBot
 {
     internal class UpdateHandler : IUpdateHandler
 

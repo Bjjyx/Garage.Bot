@@ -1,4 +1,4 @@
-﻿namespace Garage.Bot.Data
+﻿namespace Garage.Bot.Core.Data
 {
     internal class GarageUser
     {

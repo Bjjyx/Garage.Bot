@@ -1,6 +1,7 @@
-﻿using Garage.Bot.Data;
+﻿using Garage.Bot.Core.Data;
+using Garage.Bot.Core.DataAccess;
 
-namespace Garage.Bot
+namespace Garage.Bot.Core.Managers
 {
     internal class UserManager: IUserManager
     {

@@ -1,4 +1,4 @@
-﻿namespace Garage.Bot
+﻿namespace Garage.Bot.Core.Managers
 {
     internal interface IVehicleReportService
     {
